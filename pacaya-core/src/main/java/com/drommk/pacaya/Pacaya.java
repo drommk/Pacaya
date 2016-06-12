@@ -67,6 +67,10 @@ public class Pacaya<T> {
                         , subscriber::onError);
     }
 
+    public boolean isPeriodicFlushStarted() {
+        return intervalSubscription != null && !intervalSubscription.isUnsubscribed();
+    }
+
     public void stopPeriodicFlush() {
         if (intervalSubscription == null) {
             return;
@@ -96,7 +100,7 @@ public class Pacaya<T> {
                 .flatMap(this::flush)
                 .doOnNext(aLong -> logger.info("deleting up to {}", aLong))
                 .flatMap(localStorageService::deleteUpTo)
-                .finallyDo(() -> isLocked = false)
+                .doOnCompleted(() -> isLocked = false)
                 .subscribe(intObservable -> logger.debug("checked"),
                         subscriber::onError);
     }

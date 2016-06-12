@@ -13,12 +13,7 @@
     tools:showIn="@layout/activity_main">
 
     <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Define your Pacaya Settings" />
-
-    <NumberPicker
-        android:id="@+id/autoflushsize"
-        android:layout_width="wrap_content"
+        android:id="@+id/storage"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 </RelativeLayout>
