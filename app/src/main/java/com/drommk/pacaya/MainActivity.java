@@ -2,6 +2,7 @@ package com.drommk.pacaya;
 
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.widget.TextView;
@@ -37,8 +38,9 @@ public class MainActivity extends AppCompatActivity {
     private Random random = new Random();
     private TextView storageTextView;
     private Observable<Long> intervalObservable =
-            Observable.interval(new Random().nextInt(100), TimeUnit.MILLISECONDS)
-                    .filter(aLong -> random.nextInt(1000) % 10 == 0)
+            Observable.interval(100, TimeUnit.MILLISECONDS)
+                    .map(aLong -> (long) random.nextInt(1000000))
+                    .filter(aLong -> aLong % 10 == 0)
                     .doOnNext(aLong1 -> pacaya.log(new MyEvent(Integer.parseInt(aLong1.toString()))));
     private Subscription intervalSubscription;
     private Subscription refresherSubscription;
@@ -59,10 +61,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
         fab.setOnClickListener(view -> {
+
             if (pacaya.isPeriodicFlushStarted()) {
                 pacaya.stopPeriodicFlush();
+                Snackbar.make(view, "Stopped periodic flush", Snackbar.LENGTH_SHORT).show();
                 return;
             }
+            Snackbar.make(view, "Started periodic flush", Snackbar.LENGTH_SHORT).show();
             pacaya.startPeriodicFlush(PERIODIC_FLUSH_INTERVAL, TimeUnit.SECONDS);
         });
     }
@@ -89,8 +94,9 @@ public class MainActivity extends AppCompatActivity {
         refresherSubscription = Observable.interval(100, TimeUnit.MILLISECONDS)
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(aLong -> storageTextView.setText(
-                        String.format("FLUSHED(%d)%n%nSTORED(%d) : %s %n",
+                        String.format("FLUSHED(%d) | PRUNED(%d)%n%nSTORED(%d) : %s %n",
                                 sampleFlushService.flushed,
+                                sampleStorageService.pruned,
                                 sampleStorageService.events.size(),
                                 sampleStorageService.events.toString())));
 
@@ -129,6 +135,7 @@ public class MainActivity extends AppCompatActivity {
 
     public class SampleStorageService implements LocalStorageService<MyEvent> {
         List<MyEvent> events = Collections.synchronizedList(new ArrayList<>());
+        int pruned = 0;
 
         @Override
         public Observable<List<MyEvent>> list(int limit) {
@@ -163,6 +170,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public Observable<Integer> deleteOlderItems(Integer count) {
             List<MyEvent> obsoleteEvents = events.subList(0, count);
+            pruned += obsoleteEvents.size();
             events.removeAll(obsoleteEvents);
             return Observable.just(obsoleteEvents.size());
         }
